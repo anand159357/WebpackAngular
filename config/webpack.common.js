@@ -1,7 +1,11 @@
 var webpack = require('webpack');
 var HtmlWebpackPlugin = require('html-webpack-plugin');
-var ExtractTextPlugin = require('extract-text-webpack-plugin');
+var ExtractTextPlugin = require('mini-css-extract-plugin');
 var helpers = require('./helpers');
+var path = require('path');
+function root(__path) {
+  return path.join(__dirname, __path);
+}
 
 module.exports = {
   entry: {
@@ -16,6 +20,12 @@ module.exports = {
 
   module: {
     rules: [
+      {
+        // Mark files inside `@angular/core` as using SystemJS style dynamic imports.
+        // Removing this will cause deprecation warnings to appear.
+        test: /[\/\\]@angular[\/\\]core[\/\\].+\.js$/,
+        parser: { system: true },
+      },
       {
         test: /\.ts$/,
         loaders: [
@@ -36,28 +46,51 @@ module.exports = {
       {
         test: /\.css$/,
         exclude: helpers.root('src', 'app'),
-        loader: ExtractTextPlugin.extract({ fallbackLoader: 'style-loader', loader: 'css-loader?sourceMap' })
+        loader: ExtractTextPlugin.loader
       },
       {
         test: /\.css$/,
-        include: helpers.root('src', 'app'),
-        loader: 'raw-loader'
+        use: [
+          {
+            loader: ExtractTextPlugin.loader,
+            options: {
+              // you can specify a publicPath here
+              // by default it uses publicPath in webpackOptions.output
+              publicPath: '../',
+              hmr: process.env.NODE_ENV === 'development',
+            },
+          },
+          'css-loader',
+        ],
       }
     ]
   },
 
   plugins: [
     // Workaround for angular/angular#11580
-    new webpack.ContextReplacementPlugin(
-      // The (\\|\/) piece accounts for path separators in *nix and Windows
-      /angular(\\|\/)core(\\|\/)@angular/,
-      helpers.root('./src'), // location of your src
-      {} // a map of your routes
-    ),
-
-    new webpack.optimize.CommonsChunkPlugin({
-      name: ['app', 'vendor', 'polyfills']
+   
+      new webpack.LoaderOptionsPlugin({
+      options:{
+        optimization: {
+          splitChunks:{
+              cacheGroups:{
+                venders:{
+                  priority: -10,
+                  test: /[\\/]node_modules[\\/]/
+                }
+              },
+              chuncks: 'async',
+              minChunks: 1,
+              minSize: 30000,
+              name: true
+          }
+        }
+      }
     }),
+
+    // new webpack.optimize.CommonsChunkPlugin({
+    //   name: ['app', 'vendor', 'polyfills']
+    // }),
 
     new HtmlWebpackPlugin({
       template: 'src/index.html'
