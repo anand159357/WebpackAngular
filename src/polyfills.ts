@@ -1,4 +1,4 @@
-import  'core-js/es/reflect';
+import 'core-js/proposals/reflect-metadata';
 require('zone.js/dist/zone');
 
 if (process.env.ENV === 'production') {

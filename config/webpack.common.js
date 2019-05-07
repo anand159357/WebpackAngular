@@ -51,13 +51,20 @@ module.exports = {
       {
         test: /\.css$/,
         use: [
+          { loader: 'to-string-loader' }, 
+          { loader: 'css-loader' },
+          { loader: 'sass-loader' },
           {
             loader: ExtractTextPlugin.loader,
             options: {
               // you can specify a publicPath here
               // by default it uses publicPath in webpackOptions.output
-              publicPath: '../',
-              hmr: process.env.NODE_ENV === 'development',
+              publicPath: (resourcePath, context) => {
+                // publicPath is the relative path of the resource to the context
+                // e.g. for ./css/admin/main.css the publicPath will be ../../
+                // while for ./css/main.css the publicPath will be ../
+                return path.relative(path.dirname(resourcePath), context) + '/';
+              }
             },
           },
           'css-loader',
@@ -94,6 +101,12 @@ module.exports = {
 
     new HtmlWebpackPlugin({
       template: 'src/index.html'
+    }),
+    new ExtractTextPlugin({
+      // Options similar to the same options in webpackOptions.output
+      // both options are optional
+      filename: '[name].css',
+      chunkFilename: '[id].css',
     })
   ]
 };
